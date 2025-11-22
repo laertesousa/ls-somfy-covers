@@ -66,7 +66,7 @@ async def _load_device(hass, entry, device, async_add_entities):
     async_add_entities([cover_entity])
 
     async def periodic_refresh(now):
-        logger.info("Refreshing cover for device: %s - %s", client.ip, device.id)
+        logger.debug("Refreshing cover for device: %s - %s", client.ip, device.id)
         await hass.async_add_executor_job(client.login)
         await cover_entity.async_update()
 

@@ -2,6 +2,7 @@ import logging
 
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.entity import EntityCategory
 
 from .const import DOMAIN
 from .helpers.devices import get_devices_for_entry, get_device_options, build_device_info
@@ -37,6 +38,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     async_add_entities(entities)
 
 class DeviceDetailsSensor(SensorEntity):
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
     def __init__(self, device, label, value, icon = None):
         self._device = device
         self._attr_name = label
@@ -53,6 +55,7 @@ class DeviceDetailsSensor(SensorEntity):
         return self._attr_native_value
 
 class ReadOnlyValueSensor(SensorEntity):
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
     def __init__(self, label, value, icon = None):
         self._attr_name = label
         self._attr_unique_id = label
