@@ -91,6 +91,7 @@ class SomfyCover(CoverEntity):
         self._pin = data["pin"]
         self._attr_unique_id = f"{self.device.id}_cover"
         self._position = None
+        self._previous_position = None
         self._is_closing = None
         self._is_opening = None
 
@@ -151,18 +152,24 @@ class SomfyCover(CoverEntity):
         self.async_write_ha_state()
 
     async def async_update(self):
-        # await self.hass.async_add_executor_job(self._client.login)
-        logger.debug("update triggered: %s:%s", self._is_closing, self._is_opening)
-        if self._is_closing is False and self._is_opening is False:
-            return
-
+        logger.debug("update triggered - closing/opening: %s:%s", self._is_closing, self._is_opening)
+        logger.debug("update triggered - position: %s:%s", self._previous_position, self._position)
         status = await self.hass.async_add_executor_job(self._client.get_status)
         logger.debug(f"Shade status - {status}")
         if status is not None and status.error is None:
-            # This is basic. You can refine it based on actual status/direction data
+            # Store previous position and movement state before updating
+            self._previous_position = self._position
+            was_moving = self._is_closing or self._is_opening
+            
+            # Update position
             self._position = 100 - status.position.value
-            self._is_closing = status.is_moving() and status.get_direction() == Direction.down
-            self._is_opening = status.is_moving() and status.get_direction() == Direction.up
+            
+            # Determine if cover is no longer moving
+            if self._previous_position is not None and self._position == self._previous_position:
+                self._is_closing = False
+                self._is_opening = False
+                self._previous_position = None
+            
             self.async_write_ha_state()
         else:
             logger.warning("Unable to retrieve shade status")
@@ -171,4 +178,19 @@ class SomfyCover(CoverEntity):
         """Move the cover to a specific position."""
         logger.debug(f"setting position {kwargs}")
         position = kwargs.get("position")
+        current_position = self._position or 0
+        
         await self.hass.async_add_executor_job(self._client.move, 100 - position)
+        
+        # Set movement flags based on direction
+        if position > current_position:
+            self._is_opening = True
+            self._is_closing = False
+        elif position < current_position:
+            self._is_opening = False
+            self._is_closing = True
+        else:
+            self._is_opening = False
+            self._is_closing = False
+        
+        self.async_write_ha_state()
