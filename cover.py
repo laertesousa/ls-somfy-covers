@@ -9,7 +9,7 @@ from .const import DOMAIN, PLATFORMS
 from .somfy.classes.SomfyPoeBlindClient import SomfyPoeBlindClient
 from .somfy.dtos.somfy_objects import Direction
 from .helpers.devices import get_devices_for_entry, get_device_options, build_device_info
-
+#test
 logger = logging.getLogger("Cover")
 
 async def async_setup_entry(hass, entry, async_add_entities):
