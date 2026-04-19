@@ -1,0 +1,126 @@
+blueprint:
+  name: Lutron Pico 3BRL - Cover Switch
+  description: >
+    Bind a Lutron Pico 3-Button with Raise/Lower remote
+    (PJ2-3BRL-GXX-X01 / Pico3ButtonRaiseLower) to a cover. Pick which
+    button triggers open, close, and stop. Requires the Lutron Caseta
+    integration.
+  domain: automation
+  input:
+    pico_remote:
+      name: Pico Remote
+      description: The Pico 3BRL remote (paired via Lutron Caseta).
+      selector:
+        device:
+          filter:
+            - integration: lutron_caseta
+              manufacturer: Lutron Electronics Co., Inc
+    open_button:
+      name: Open Button
+      description: Button that opens the cover.
+      default: "on"
+      selector:
+        select:
+          options:
+            - label: On (top)
+              value: "on"
+            - label: Raise (▲)
+              value: "raise"
+            - label: Favorite (middle)
+              value: "stop"
+            - label: Lower (▼)
+              value: "lower"
+            - label: Off (bottom)
+              value: "off"
+    close_button:
+      name: Close Button
+      description: Button that closes the cover.
+      default: "off"
+      selector:
+        select:
+          options:
+            - label: On (top)
+              value: "on"
+            - label: Raise (▲)
+              value: "raise"
+            - label: Favorite (middle)
+              value: "stop"
+            - label: Lower (▼)
+              value: "lower"
+            - label: Off (bottom)
+              value: "off"
+    stop_button:
+      name: Stop Button
+      description: Button that stops the cover.
+      default: "stop"
+      selector:
+        select:
+          options:
+            - label: On (top)
+              value: "on"
+            - label: Raise (▲)
+              value: "raise"
+            - label: Favorite (middle)
+              value: "stop"
+            - label: Lower (▼)
+              value: "lower"
+            - label: Off (bottom)
+              value: "off"
+    cover:
+      name: Cover
+      selector:
+        target:
+          entity:
+            domain: cover
+
+mode: single
+
+triggers:
+  - trigger: event
+    event_type: lutron_caseta_button_event
+    event_data:
+      device_id: !input pico_remote
+      button_type: !input open_button
+      action: press
+    id: open
+
+  - trigger: event
+    event_type: lutron_caseta_button_event
+    event_data:
+      device_id: !input pico_remote
+      button_type: !input close_button
+      action: press
+    id: close
+
+  - trigger: event
+    event_type: lutron_caseta_button_event
+    event_data:
+      device_id: !input pico_remote
+      button_type: !input stop_button
+      action: press
+    id: stop
+
+condition: []
+
+action:
+  - choose:
+      - conditions:
+          - condition: trigger
+            id: open
+        sequence:
+          - action: cover.open_cover
+            target: !input cover
+
+      - conditions:
+          - condition: trigger
+            id: close
+        sequence:
+          - action: cover.close_cover
+            target: !input cover
+
+      - conditions:
+          - condition: trigger
+            id: stop
+        sequence:
+          - action: cover.stop_cover
+            target: !input cover
