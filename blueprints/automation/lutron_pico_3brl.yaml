@@ -2,9 +2,16 @@ blueprint:
   name: Lutron Pico 3BRL - Cover Switch
   description: >
     Bind a Lutron Pico 3-Button with Raise/Lower remote
-    (PJ2-3BRL-GXX-X01 / Pico3ButtonRaiseLower) to a cover. Pick which
-    button triggers open, close, and stop. Requires the Lutron Caseta
-    integration.
+    (PJ2-3BRL-GXX-X01 / Pico3ButtonRaiseLower) to a cover. Each action
+    (open / close / stop) can be triggered by a single tap of one button
+    AND/OR a double tap of another (or the same) button. Set a binding
+    to "None" to disable it. Requires the Lutron Caseta integration.
+
+    Note: when any double-tap binding is configured, every press of that
+    button waits for the configured window (default 400ms) before
+    deciding single vs. double. Other Pico presses during that window
+    are dropped (mode: single is required to avoid a phantom single-tap
+    firing after a double-tap).
   domain: automation
   input:
     pico_remote:
@@ -14,59 +21,8 @@ blueprint:
         device:
           filter:
             - integration: lutron_caseta
-              manufacturer: Lutron Electronics Co., Inc
-              model: PJ2-3BRL-GXX-X01 (Pico3ButtonRaiseLower)
-    open_button:
-      name: Open Button
-      description: Button that opens the cover.
-      default: "on"
-      selector:
-        select:
-          options:
-            - label: On (top)
-              value: "on"
-            - label: Raise (▲)
-              value: "raise"
-            - label: Favorite (middle)
-              value: "stop"
-            - label: Lower (▼)
-              value: "lower"
-            - label: Off (bottom)
-              value: "off"
-    close_button:
-      name: Close Button
-      description: Button that closes the cover.
-      default: "off"
-      selector:
-        select:
-          options:
-            - label: On (top)
-              value: "on"
-            - label: Raise (▲)
-              value: "raise"
-            - label: Favorite (middle)
-              value: "stop"
-            - label: Lower (▼)
-              value: "lower"
-            - label: Off (bottom)
-              value: "off"
-    stop_button:
-      name: Stop Button
-      description: Button that stops the cover.
-      default: "stop"
-      selector:
-        select:
-          options:
-            - label: On (top)
-              value: "on"
-            - label: Raise (▲)
-              value: "raise"
-            - label: Favorite (middle)
-              value: "stop"
-            - label: Lower (▼)
-              value: "lower"
-            - label: Off (bottom)
-              value: "off"
+              manufacturer: "Lutron Electronics Co., Inc"
+              model: "PJ2-3BRL-GXX-X01 (Pico3ButtonRaiseLower)"
     cover:
       name: Cover
       selector:
@@ -74,54 +30,194 @@ blueprint:
           entity:
             domain: cover
 
+    open_button:
+      name: Open — single tap
+      description: Button whose single tap opens the cover.
+      default: "on"
+      selector:
+        select:
+          options:
+            - { label: "None", value: "none" }
+            - { label: "On (top)", value: "on" }
+            - { label: "Raise (▲)", value: "raise" }
+            - { label: "Favorite (middle)", value: "stop" }
+            - { label: "Lower (▼)", value: "lower" }
+            - { label: "Off (bottom)", value: "off" }
+    close_button:
+      name: Close — single tap
+      description: Button whose single tap closes the cover.
+      default: "off"
+      selector:
+        select:
+          options:
+            - { label: "None", value: "none" }
+            - { label: "On (top)", value: "on" }
+            - { label: "Raise (▲)", value: "raise" }
+            - { label: "Favorite (middle)", value: "stop" }
+            - { label: "Lower (▼)", value: "lower" }
+            - { label: "Off (bottom)", value: "off" }
+    stop_button:
+      name: Stop — single tap
+      description: Button whose single tap stops the cover.
+      default: "stop"
+      selector:
+        select:
+          options:
+            - { label: "None", value: "none" }
+            - { label: "On (top)", value: "on" }
+            - { label: "Raise (▲)", value: "raise" }
+            - { label: "Favorite (middle)", value: "stop" }
+            - { label: "Lower (▼)", value: "lower" }
+            - { label: "Off (bottom)", value: "off" }
+
+    open_button_double_tap:
+      name: Open — double tap
+      description: Button whose double tap opens the cover. Set to "None" to disable.
+      default: "none"
+      selector:
+        select:
+          options:
+            - { label: "None", value: "none" }
+            - { label: "On (top)", value: "on" }
+            - { label: "Raise (▲)", value: "raise" }
+            - { label: "Favorite (middle)", value: "stop" }
+            - { label: "Lower (▼)", value: "lower" }
+            - { label: "Off (bottom)", value: "off" }
+    close_button_double_tap:
+      name: Close — double tap
+      description: Button whose double tap closes the cover. Set to "None" to disable.
+      default: "none"
+      selector:
+        select:
+          options:
+            - { label: "None", value: "none" }
+            - { label: "On (top)", value: "on" }
+            - { label: "Raise (▲)", value: "raise" }
+            - { label: "Favorite (middle)", value: "stop" }
+            - { label: "Lower (▼)", value: "lower" }
+            - { label: "Off (bottom)", value: "off" }
+    stop_button_double_tap:
+      name: Stop — double tap
+      description: Button whose double tap stops the cover. Set to "None" to disable.
+      default: "none"
+      selector:
+        select:
+          options:
+            - { label: "None", value: "none" }
+            - { label: "On (top)", value: "on" }
+            - { label: "Raise (▲)", value: "raise" }
+            - { label: "Favorite (middle)", value: "stop" }
+            - { label: "Lower (▼)", value: "lower" }
+            - { label: "Off (bottom)", value: "off" }
+
+    double_tap_window_ms:
+      name: Double-tap window (ms)
+      description: How long to wait for a second tap before treating the press as a single tap.
+      default: 400
+      selector:
+        number:
+          min: 150
+          max: 1000
+          step: 50
+          unit_of_measurement: ms
+          mode: slider
+
 mode: single
+
+variables:
+  open_btn: !input open_button
+  close_btn: !input close_button
+  stop_btn: !input stop_button
+  open_btn_dbl: !input open_button_double_tap
+  close_btn_dbl: !input close_button_double_tap
+  stop_btn_dbl: !input stop_button_double_tap
 
 triggers:
   - trigger: event
     event_type: lutron_caseta_button_event
     event_data:
       device_id: !input pico_remote
-      button_type: !input open_button
       action: press
-    id: open
-
-  - trigger: event
-    event_type: lutron_caseta_button_event
-    event_data:
-      device_id: !input pico_remote
-      button_type: !input close_button
-      action: press
-    id: close
-
-  - trigger: event
-    event_type: lutron_caseta_button_event
-    event_data:
-      device_id: !input pico_remote
-      button_type: !input stop_button
-      action: press
-    id: stop
 
 condition: []
 
 action:
+  - variables:
+      btn: "{{ trigger.event.data.button_type }}"
+      single_buttons: "{{ [open_btn, close_btn, stop_btn] | reject('eq', 'none') | list }}"
+      double_buttons: "{{ [open_btn_dbl, close_btn_dbl, stop_btn_dbl] | reject('eq', 'none') | list }}"
+      has_single: "{{ btn in single_buttons }}"
+      has_double: "{{ btn in double_buttons }}"
+
+  # Ignore presses of unbound buttons
+  - if: "{{ not has_single and not has_double }}"
+    then:
+      - stop: "Button not bound"
+
   - choose:
-      - conditions:
-          - condition: trigger
-            id: open
+      # Button has a double-tap binding → wait briefly for a second press
+      - conditions: "{{ has_double }}"
         sequence:
-          - action: cover.open_cover
-            target: !input cover
+          - wait_for_trigger:
+              - trigger: event
+                event_type: lutron_caseta_button_event
+                event_data:
+                  device_id: !input pico_remote
+                  action: press
+            timeout:
+              milliseconds: !input double_tap_window_ms
+            continue_on_timeout: true
 
-      - conditions:
-          - condition: trigger
-            id: close
-        sequence:
-          - action: cover.close_cover
-            target: !input cover
+          - variables:
+              is_double: "{{ wait.trigger is not none and wait.trigger.event.data.button_type == btn }}"
 
-      - conditions:
-          - condition: trigger
-            id: stop
-        sequence:
-          - action: cover.stop_cover
-            target: !input cover
+          - choose:
+              # Double tap detected → fire the action whose double-tap binding matches
+              - conditions: "{{ is_double }}"
+                sequence:
+                  - choose:
+                      - conditions: "{{ btn == open_btn_dbl }}"
+                        sequence:
+                          - action: cover.open_cover
+                            target: !input cover
+                      - conditions: "{{ btn == close_btn_dbl }}"
+                        sequence:
+                          - action: cover.close_cover
+                            target: !input cover
+                      - conditions: "{{ btn == stop_btn_dbl }}"
+                        sequence:
+                          - action: cover.stop_cover
+                            target: !input cover
+
+              # Timed out → it was a single tap (only fire if button is single-bound)
+              - conditions: "{{ not is_double and has_single }}"
+                sequence:
+                  - choose:
+                      - conditions: "{{ btn == open_btn }}"
+                        sequence:
+                          - action: cover.open_cover
+                            target: !input cover
+                      - conditions: "{{ btn == close_btn }}"
+                        sequence:
+                          - action: cover.close_cover
+                            target: !input cover
+                      - conditions: "{{ btn == stop_btn }}"
+                        sequence:
+                          - action: cover.stop_cover
+                            target: !input cover
+
+    # No double-tap binding for this button → fire single-tap action immediately
+    default:
+      - choose:
+          - conditions: "{{ btn == open_btn }}"
+            sequence:
+              - action: cover.open_cover
+                target: !input cover
+          - conditions: "{{ btn == close_btn }}"
+            sequence:
+              - action: cover.close_cover
+                target: !input cover
+          - conditions: "{{ btn == stop_btn }}"
+            sequence:
+              - action: cover.stop_cover
+                target: !input cover
