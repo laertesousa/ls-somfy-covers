@@ -1,0 +1,95 @@
+blueprint:
+  name: Sunrise/Sunset Schedule
+  description: Turn an entity on/off at sunset and the opposite at sunrise, with optional offsets (in minutes; negative = before the sun event).
+  domain: automation
+  input:
+    target_entity:
+      name: Entity
+      description: The light, switch, fan, or cover to control.
+      selector:
+        target:
+          entity:
+            domain:
+              - light
+              - switch
+              - fan
+              - cover
+    sunset_action:
+      name: Action at Sunset
+      description: What to do at sunset (the opposite happens at sunrise).
+      default: "on"
+      selector:
+        select:
+          options:
+            - label: Turn On
+              value: "on"
+            - label: Turn Off
+              value: "off"
+    sunset_offset:
+      name: Sunset Offset (minutes)
+      description: Minutes relative to sunset. Negative = before sunset, positive = after.
+      default: 0
+      selector:
+        number:
+          min: -180
+          max: 180
+          step: 1
+          unit_of_measurement: minutes
+          mode: box
+    sunrise_offset:
+      name: Sunrise Offset (minutes)
+      description: Minutes relative to sunrise. Negative = before sunrise, positive = after.
+      default: 0
+      selector:
+        number:
+          min: -180
+          max: 180
+          step: 1
+          unit_of_measurement: minutes
+          mode: box
+
+mode: single
+
+variables:
+  sunset_action: !input sunset_action
+
+triggers:
+  - trigger: sun
+    event: sunset
+    offset:
+      minutes: !input sunset_offset
+    id: "sunset"
+
+  - trigger: sun
+    event: sunrise
+    offset:
+      minutes: !input sunrise_offset
+    id: "sunrise"
+
+condition: []
+
+action:
+  - choose:
+      - conditions:
+          - condition: trigger
+            id: "sunset"
+        sequence:
+          - if: "{{ sunset_action == 'on' }}"
+            then:
+              - action: homeassistant.turn_on
+                target: !input target_entity
+            else:
+              - action: homeassistant.turn_off
+                target: !input target_entity
+
+      - conditions:
+          - condition: trigger
+            id: "sunrise"
+        sequence:
+          - if: "{{ sunset_action == 'on' }}"
+            then:
+              - action: homeassistant.turn_off
+                target: !input target_entity
+            else:
+              - action: homeassistant.turn_on
+                target: !input target_entity
