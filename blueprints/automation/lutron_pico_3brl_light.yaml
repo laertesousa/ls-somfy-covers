@@ -1,0 +1,56 @@
+blueprint:
+  name: Lutron Pico 3BRL - Light Switch
+  description: Easily setup Lutron Pico 3BRL with a light. The On button turns the light on; the Off button turns it off.
+  domain: automation
+  input:
+    pico_remote:
+      name: Pico Remote
+      selector:
+        device:
+          filter:
+            - integration: lutron_caseta
+              manufacturer: "Lutron Electronics Co., Inc"
+              model: "PJ2-3BRL-GXX-X01 (Pico3ButtonRaiseLower)"
+    light:
+      name: Light
+      selector:
+        target:
+          entity:
+            domain: light
+
+mode: single
+
+triggers:
+  - trigger: event
+    event_type: lutron_caseta_button_event
+    event_data:
+      device_id: !input pico_remote
+      button_type: "on"
+      action: press
+    id: "on"
+
+  - trigger: event
+    event_type: lutron_caseta_button_event
+    event_data:
+      device_id: !input pico_remote
+      button_type: "off"
+      action: press
+    id: "off"
+
+condition: []
+
+action:
+  - choose:
+      - conditions:
+          - condition: trigger
+            id: "on"
+        sequence:
+          - action: light.turn_on
+            target: !input light
+
+      - conditions:
+          - condition: trigger
+            id: "off"
+        sequence:
+          - action: light.turn_off
+            target: !input light
