@@ -52,6 +52,7 @@ mode: single
 
 variables:
   sunset_action: !input sunset_action
+  target_entity: !input target_entity
 
 triggers:
   - trigger: sun
