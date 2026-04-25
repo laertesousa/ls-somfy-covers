@@ -69,27 +69,17 @@ triggers:
 condition: []
 
 action:
-  - choose:
-      - conditions:
-          - condition: trigger
-            id: "sunset"
-        sequence:
-          - if: "{{ sunset_action == 'on' }}"
-            then:
-              - action: homeassistant.turn_on
-                target: !input target_entity
-            else:
-              - action: homeassistant.turn_off
-                target: !input target_entity
-
-      - conditions:
-          - condition: trigger
-            id: "sunrise"
-        sequence:
-          - if: "{{ sunset_action == 'on' }}"
-            then:
-              - action: homeassistant.turn_off
-                target: !input target_entity
-            else:
-              - action: homeassistant.turn_on
-                target: !input target_entity
+  - variables:
+      is_sunset: >-
+        {% if trigger is defined and trigger.id is defined %}
+          {{ trigger.id == 'sunset' }}
+        {% else %}
+          {{ states('sun.sun') == 'below_horizon' }}
+        {% endif %}
+  - if: "{{ is_sunset == (sunset_action == 'on') }}"
+    then:
+      - action: homeassistant.turn_on
+        target: !input target_entity
+    else:
+      - action: homeassistant.turn_off
+        target: !input target_entity
