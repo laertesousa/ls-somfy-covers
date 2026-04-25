@@ -70,16 +70,19 @@ condition: []
 
 action:
   - variables:
-      is_sunset: >-
-        {% if trigger is defined and trigger.id is defined %}
-          {{ trigger.id == 'sunset' }}
-        {% else %}
-          {{ states('sun.sun') == 'below_horizon' }}
-        {% endif %}
-  - if: "{{ is_sunset == (sunset_action == 'on') }}"
-    then:
-      - action: homeassistant.turn_on
-        target: !input target_entity
-    else:
-      - action: homeassistant.turn_off
-        target: !input target_entity
+      is_sunset: "{{ (trigger.id == 'sunset') if (trigger is defined and trigger.id is defined) else (states('sun.sun') == 'below_horizon') }}"
+      should_open: "{{ is_sunset == (sunset_action == 'on') }}"
+      raw_ids: "{{ target_entity.entity_id | default([]) }}"
+      entity_ids: "{{ [raw_ids] if raw_ids is string else raw_ids }}"
+  - repeat:
+      for_each: "{{ entity_ids }}"
+      sequence:
+        - action: >-
+            {%- set domain = repeat.item.split('.')[0] -%}
+            {%- if domain == 'cover' -%}
+            cover.{{ 'open_cover' if should_open else 'close_cover' }}
+            {%- else -%}
+            homeassistant.{{ 'turn_on' if should_open else 'turn_off' }}
+            {%- endif -%}
+          target:
+            entity_id: "{{ repeat.item }}"
