@@ -72,10 +72,17 @@ action:
   - variables:
       is_sunset: "{{ (trigger.id == 'sunset') if (trigger is defined and trigger.id is defined) else (states('sun.sun') == 'below_horizon') }}"
       should_open: "{{ is_sunset == (sunset_action == 'on') }}"
-      raw_ids: "{{ target_entity.entity_id | default([]) }}"
-      entity_ids: "{{ [raw_ids] if raw_ids is string else raw_ids }}"
+      raw_entity_ids: "{{ target_entity.entity_id | default([]) }}"
+      raw_device_ids: "{{ target_entity.device_id | default([]) }}"
+      raw_area_ids: "{{ target_entity.area_id | default([]) }}"
+      direct_entity_ids: "{{ [raw_entity_ids] if raw_entity_ids is string else raw_entity_ids }}"
+      device_ids: "{{ [raw_device_ids] if raw_device_ids is string else raw_device_ids }}"
+      area_ids: "{{ [raw_area_ids] if raw_area_ids is string else raw_area_ids }}"
+      from_devices: "{{ device_ids | map('device_entities') | sum(start=[]) }}"
+      from_areas: "{{ area_ids | map('area_entities') | sum(start=[]) }}"
+      all_ids: "{{ (direct_entity_ids + from_devices + from_areas) | unique | select('match', '^(cover|light|switch|fan)\\.') | list }}"
   - repeat:
-      for_each: "{{ entity_ids }}"
+      for_each: "{{ all_ids }}"
       sequence:
         - action: >-
             {%- set domain = repeat.item.split('.')[0] -%}
