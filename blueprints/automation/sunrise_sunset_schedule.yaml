@@ -137,18 +137,33 @@ action:
         {%- elif switch_sunset_action == 'on' -%}off
         {%- else -%}on
         {%- endif -%}
-      has_covers: "{{ (covers.entity_id | default(false)) or (covers.device_id | default(false)) or (covers.area_id | default(false)) }}"
-      has_lights: "{{ (lights.entity_id | default(false)) or (lights.device_id | default(false)) or (lights.area_id | default(false)) }}"
-      has_switches: "{{ (switches.entity_id | default(false)) or (switches.device_id | default(false)) or (switches.area_id | default(false)) }}"
-  - if: "{{ cover_op != 'none' and has_covers }}"
-    then:
-      - action: "cover.{{ 'open_cover' if cover_op == 'open' else 'close_cover' }}"
-        target: !input covers
-  - if: "{{ light_op != 'none' and has_lights }}"
-    then:
-      - action: "light.{{ 'turn_on' if light_op == 'on' else 'turn_off' }}"
-        target: !input lights
-  - if: "{{ switch_op != 'none' and has_switches }}"
-    then:
-      - action: "homeassistant.{{ 'turn_on' if switch_op == 'on' else 'turn_off' }}"
-        target: !input switches
+      has_covers: "{{ ((covers.entity_id | default([]) | length) + (covers.device_id | default([]) | length) + (covers.area_id | default([]) | length)) > 0 }}"
+      has_lights: "{{ ((lights.entity_id | default([]) | length) + (lights.device_id | default([]) | length) + (lights.area_id | default([]) | length)) > 0 }}"
+      has_switches: "{{ ((switches.entity_id | default([]) | length) + (switches.device_id | default([]) | length) + (switches.area_id | default([]) | length)) > 0 }}"
+  - choose:
+      - conditions: "{{ has_covers and cover_op == 'open' }}"
+        sequence:
+          - action: cover.open_cover
+            target: !input covers
+      - conditions: "{{ has_covers and cover_op == 'close' }}"
+        sequence:
+          - action: cover.close_cover
+            target: !input covers
+  - choose:
+      - conditions: "{{ has_lights and light_op == 'on' }}"
+        sequence:
+          - action: light.turn_on
+            target: !input lights
+      - conditions: "{{ has_lights and light_op == 'off' }}"
+        sequence:
+          - action: light.turn_off
+            target: !input lights
+  - choose:
+      - conditions: "{{ has_switches and switch_op == 'on' }}"
+        sequence:
+          - action: homeassistant.turn_on
+            target: !input switches
+      - conditions: "{{ has_switches and switch_op == 'off' }}"
+        sequence:
+          - action: homeassistant.turn_off
+            target: !input switches
