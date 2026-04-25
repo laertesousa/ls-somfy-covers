@@ -1,23 +1,41 @@
 blueprint:
   name: Sunrise/Sunset Schedule
-  description: Turn an entity on/off at sunset and the opposite at sunrise, with optional offsets (in minutes; negative = before the sun event).
+  description: Control covers, lights, and switches/fans at sunset, with the opposite happening at sunrise. Each domain has its own action; pick "None" to skip a domain. Optional offsets in minutes (negative = before the sun event).
   domain: automation
   input:
-    target_entity:
-      name: Entity
-      description: The light, switch, fan, or cover to control.
+    covers:
+      name: Covers
+      description: Covers to control. Leave empty to skip.
+      default: {}
       selector:
         target:
           entity:
-            domain:
-              - light
-              - switch
-              - fan
-              - cover
-    sunset_action:
-      name: Action at Sunset
-      description: What to do at sunset (the opposite happens at sunrise).
-      default: "on"
+            domain: cover
+    cover_sunset_action:
+      name: Cover Action at Sunset
+      description: What to do with covers at sunset (opposite at sunrise).
+      default: "none"
+      selector:
+        select:
+          options:
+            - label: Open
+              value: "open"
+            - label: Close
+              value: "close"
+            - label: None
+              value: "none"
+    lights:
+      name: Lights
+      description: Lights to control. Leave empty to skip.
+      default: {}
+      selector:
+        target:
+          entity:
+            domain: light
+    light_sunset_action:
+      name: Light Action at Sunset
+      description: What to do with lights at sunset (opposite at sunrise).
+      default: "none"
       selector:
         select:
           options:
@@ -25,6 +43,31 @@ blueprint:
               value: "on"
             - label: Turn Off
               value: "off"
+            - label: None
+              value: "none"
+    switches:
+      name: Switches & Fans
+      description: Switches and fans to control. Leave empty to skip.
+      default: {}
+      selector:
+        target:
+          entity:
+            domain:
+              - switch
+              - fan
+    switch_sunset_action:
+      name: Switch/Fan Action at Sunset
+      description: What to do with switches and fans at sunset (opposite at sunrise).
+      default: "none"
+      selector:
+        select:
+          options:
+            - label: Turn On
+              value: "on"
+            - label: Turn Off
+              value: "off"
+            - label: None
+              value: "none"
     sunset_offset:
       name: Sunset Offset (minutes)
       description: Minutes relative to sunset. Negative = before sunset, positive = after.
@@ -51,8 +94,12 @@ blueprint:
 mode: single
 
 variables:
-  sunset_action: !input sunset_action
-  target_entity: !input target_entity
+  cover_sunset_action: !input cover_sunset_action
+  light_sunset_action: !input light_sunset_action
+  switch_sunset_action: !input switch_sunset_action
+  covers: !input covers
+  lights: !input lights
+  switches: !input switches
 
 triggers:
   - trigger: sun
@@ -72,25 +119,36 @@ condition: []
 action:
   - variables:
       is_sunset: "{{ (trigger.id == 'sunset') if (trigger is defined and trigger.id is defined) else (states('sun.sun') == 'below_horizon') }}"
-      should_open: "{{ is_sunset == (sunset_action == 'on') }}"
-      raw_entity_ids: "{{ target_entity.entity_id | default([]) }}"
-      raw_device_ids: "{{ target_entity.device_id | default([]) }}"
-      raw_area_ids: "{{ target_entity.area_id | default([]) }}"
-      direct_entity_ids: "{{ [raw_entity_ids] if raw_entity_ids is string else raw_entity_ids }}"
-      device_ids: "{{ [raw_device_ids] if raw_device_ids is string else raw_device_ids }}"
-      area_ids: "{{ [raw_area_ids] if raw_area_ids is string else raw_area_ids }}"
-      from_devices: "{{ device_ids | map('device_entities') | sum(start=[]) }}"
-      from_areas: "{{ area_ids | map('area_entities') | sum(start=[]) }}"
-      all_ids: "{{ (direct_entity_ids + from_devices + from_areas) | unique | select('match', '^(cover|light|switch|fan)\\.') | list }}"
-  - repeat:
-      for_each: "{{ all_ids }}"
-      sequence:
-        - action: >-
-            {%- set domain = repeat.item.split('.')[0] -%}
-            {%- if domain == 'cover' -%}
-            cover.{{ 'open_cover' if should_open else 'close_cover' }}
-            {%- else -%}
-            homeassistant.{{ 'turn_on' if should_open else 'turn_off' }}
-            {%- endif -%}
-          target:
-            entity_id: "{{ repeat.item }}"
+      cover_op: >-
+        {%- if cover_sunset_action == 'none' -%}none
+        {%- elif is_sunset -%}{{ cover_sunset_action }}
+        {%- elif cover_sunset_action == 'open' -%}close
+        {%- else -%}open
+        {%- endif -%}
+      light_op: >-
+        {%- if light_sunset_action == 'none' -%}none
+        {%- elif is_sunset -%}{{ light_sunset_action }}
+        {%- elif light_sunset_action == 'on' -%}off
+        {%- else -%}on
+        {%- endif -%}
+      switch_op: >-
+        {%- if switch_sunset_action == 'none' -%}none
+        {%- elif is_sunset -%}{{ switch_sunset_action }}
+        {%- elif switch_sunset_action == 'on' -%}off
+        {%- else -%}on
+        {%- endif -%}
+      has_covers: "{{ (covers.entity_id | default(false)) or (covers.device_id | default(false)) or (covers.area_id | default(false)) }}"
+      has_lights: "{{ (lights.entity_id | default(false)) or (lights.device_id | default(false)) or (lights.area_id | default(false)) }}"
+      has_switches: "{{ (switches.entity_id | default(false)) or (switches.device_id | default(false)) or (switches.area_id | default(false)) }}"
+  - if: "{{ cover_op != 'none' and has_covers }}"
+    then:
+      - action: "cover.{{ 'open_cover' if cover_op == 'open' else 'close_cover' }}"
+        target: !input covers
+  - if: "{{ light_op != 'none' and has_lights }}"
+    then:
+      - action: "light.{{ 'turn_on' if light_op == 'on' else 'turn_off' }}"
+        target: !input lights
+  - if: "{{ switch_op != 'none' and has_switches }}"
+    then:
+      - action: "homeassistant.{{ 'turn_on' if switch_op == 'on' else 'turn_off' }}"
+        target: !input switches
