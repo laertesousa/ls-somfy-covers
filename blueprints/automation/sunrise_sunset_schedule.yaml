@@ -68,6 +68,18 @@ blueprint:
               value: "off"
             - label: None
               value: "none"
+    sunset_actions:
+      name: Sunset Actions
+      description: Additional actions to run at sunset (e.g., call a script). Leave empty to skip.
+      default: []
+      selector:
+        action: {}
+    sunrise_actions:
+      name: Sunrise Actions
+      description: Additional actions to run at sunrise (e.g., call a script). Leave empty to skip.
+      default: []
+      selector:
+        action: {}
     sunset_offset:
       name: Sunset Offset (minutes)
       description: Minutes relative to sunset. Negative = before sunset, positive = after.
@@ -167,3 +179,7 @@ action:
         sequence:
           - action: homeassistant.turn_off
             target: !input switches
+  - choose:
+      - conditions: "{{ is_sunset }}"
+        sequence: !input sunset_actions
+    default: !input sunrise_actions
